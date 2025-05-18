@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+
+{% block title %}Schedule Lock Access{% endblock %}
+
+{% block head_extra %}
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css' rel='stylesheet' />
+    
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
+    <!-- Moment Timezone -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+    
+    <style>
+        .fc-event {
+            cursor: pointer;
+        }
+        
+        .booking-form-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .access-code-display {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            margin: 20px 0;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            border: 2px solid #0d6efd;
+        }
+        
+        .fc-event-time, .fc-event-title {
+            white-space: normal !important;
+            overflow: visible !important;
+        }
+        
+        .timezone-info {
+            text-align: center;
+            font-style: italic;
+            color: #6c757d;
+            margin: 10px 0;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Schedule Lock Access</h4>
+                </div>
+                <div class="card-body">
+                    <div id="calendar"></div>
+                    <div class="timezone-info">
+                        All times shown in <span id="current-timezone">loading...</span> timezone
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-lock me-2"></i>Book Access</h4>
+                </div>
+                <div class="card-body">
+                    <form id="bookingForm">
+                        <div class="mb-3">
+                            <label for="deviceSelect" class="form-label">Select Lock</label>
+                            <select class="form-select" id="deviceSelect" required>
+                                <option value="" selected disabled>Choose a lock...</option>
+                                <!-- Device options will be populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="userName" class="form-label">Your Name</label>
+                            <input type="text" class="form-control" id="userName" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="userEmail" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="userEmail" required>
+                            <div class="form-text">Your access code will be sent to this email.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="userPhone" class="form-label">Phone Number (Optional)</label>
+                            <input type="text" class="form-control" id="userPhone">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="startDateTime" class="form-label">Access Start Time</label>
+                            <input type="text" class="form-control" id="startDateTime" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="endDateTime" class="form-label">Access End Time</label>
+                            <input type="text" class="form-control" id="endDateTime" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-calendar-plus me-2"></i>Schedule Access
+                        </button>
+                    </form>
+                    
+                    <div id="bookingResult" class="mt-3" style="display: none;">
+                        <!-- Booking result will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading indicator -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999;">
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Booking Details Modal -->
+    <div class="modal fade" id="bookingDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle me-2"></i>Booking Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="bookingDetails">
+                        <!-- Booking details will appear here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
+    
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <!-- Moment.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get current timezone
+            const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            document.getElementById('current-timezone').textContent = systemTimezone;
+            
+            // Initialize the calendar
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                slotMinTime: '06:00:00',
+                slotMaxTime: '22:00:00',
+                allDaySlot: false,
+                selectable: true,
+                timeZone: systemTimezone,
+                select: function(info) {
+                    // Set the selected times in the form
+                    document.getElementById('startDateTime').flatpickr.setDate(info.startStr);
+                    document.getElementById('endDateTime').flatpickr.setDate(info.endStr);
+                    calendar.unselect();
+                },
+                eventClick: function(info) {
+                    // Show booking details modal
+                    showBookingDetails(info.event);
+                },
+                events: function(info, successCallback, failureCallback) {
+                    // Get the selected device ID
+                    const deviceId = document.getElementById('deviceSelect').value || 'mock-device-001';
+                    
+                    // Fetch booked periods from API
+                    fetch(`/api/booked-periods?device_id=${deviceId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const events = data.booked_periods.map(period => ({
+                                title: period.name || 'Booked',
+                                start: period.starts_at,
+                                end: period.ends_at,
+                                backgroundColor: '#0d6efd',
+                                borderColor: '#0a58ca'
+                            }));
+                            successCallback(events);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching events:', error);
+                            failureCallback(error);
+                        });
+                }
+            });
+            
+            calendar.render();
+            
+            // Initialize datetime pickers
+            flatpickr('#startDateTime', {
+                enableTime: true,
+                dateFormat: "Z",
+                altInput: true,
+                altFormat: "F j, Y at h:i K",
+                minDate: "today",
+                time_24hr: false,
+                onChange: function(selectedDates, dateStr) {
+                    // Set minimum date for end time picker
+                    document.getElementById('endDateTime').flatpickr.set('minDate', dateStr);
+                }
+            });
+            
+            flatpickr('#endDateTime', {
+                enableTime: true,
+                dateFormat: "Z",
+                altInput: true,
+                altFormat: "F j, Y at h:i K",
+                minDate: "today",
+                time_24hr: false
+            });
+            
+            // Load devices from API
+            fetch('/api/devices')
+                .then(response => response.json())
+                .then(devices => {
+                    const deviceSelect = document.getElementById('deviceSelect');
+                    devices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.device_id;
+                        option.textContent = device.name;
+                        deviceSelect.appendChild(option);
+                    });
+                    
+                    // Trigger event refresh when device is changed
+                    deviceSelect.addEventListener('change', function() {
+                        calendar.refetchEvents();
+                    });
+                })
+                .catch(error => console.error('Error loading devices:', error));
+            
+            // Handle booking form submission
+            document.getElementById('bookingForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                showLoading(true);
+                
+                const formData = {
+                    device_id: document.getElementById('deviceSelect').value,
+                    user_name: document.getElementById('userName').value,
+                    user_email: document.getElementById('userEmail').value,
+                    user_phone: document.getElementById('userPhone').value,
+                    starts_at: document.getElementById('startDateTime').value,
+                    ends_at: document.getElementById('endDateTime').value
+                };
+                
+                // Check availability first
+                fetch(`/api/check-availability?device_id=${formData.device_id}&starts_at=${formData.starts_at}&ends_at=${formData.ends_at}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_available) {
+                            // Create the booking
+                            return fetch('/api/bookings', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(formData)
+                            });
+                        } else {
+                            throw new Error('This time slot is not available. Please select another time.');
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => { throw new Error(err.description || 'Failed to create booking'); });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Show success message
+                        const resultDiv = document.getElementById('bookingResult');
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success">
+                                <h5><i class="fas fa-check-circle me-2"></i>Booking Successful!</h5>
+                                <p>Your access code has been created and sent to your email.</p>
+                                <div class="access-code-display">${data.booking.code}</div>
+                                <p class="mb-0"><strong>Valid from:</strong> ${formatISODate(data.booking.starts_at)}</p>
+                                <p><strong>Valid until:</strong> ${formatISODate(data.booking.ends_at)}</p>
+                                <p class="timezone-info">Times shown in ${systemTimezone} timezone</p>
+                            </div>
+                        `;
+                        resultDiv.style.display = 'block';
+                        
+                        // Reset form
+                        document.getElementById('bookingForm').reset();
+                        
+                        // Refresh calendar events
+                        calendar.refetchEvents();
+                    })
+                    .catch(error => {
+                        // Show error message
+                        const resultDiv = document.getElementById('bookingResult');
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>${error.message || 'An error occurred'}
+                            </div>
+                        `;
+                        resultDiv.style.display = 'block';
+                    })
+                    .finally(() => {
+                        showLoading(false);
+                    });
+            });
+            
+            // Helper function to show/hide loading overlay
+            function showLoading(show) {
+                document.getElementById('loadingOverlay').style.display = show ? 'block' : 'none';
+            }
+            
+            // Helper function to format ISO dates
+            function formatISODate(isoString) {
+                return moment(isoString).tz(systemTimezone).format('MMMM D, YYYY [at] h:mm A');
+            }
+            
+            // Function to show booking details
+            function showBookingDetails(event) {
+                const start = formatISODate(event.startStr);
+                const end = formatISODate(event.endStr);
+                
+                const detailsHtml = `
+                    <h5>${event.title}</h5>
+                    <p><strong>Start:</strong> ${start}</p>
+                    <p><strong>End:</strong> ${end}</p>
+                    <p class="timezone-info">Times shown in ${systemTimezone} timezone</p>
+                `;
+                
+                document.getElementById('bookingDetails').innerHTML = detailsHtml;
+                
+                const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
+                modal.show();
+            }
+        });
+    </script>
+{% endblock %} 

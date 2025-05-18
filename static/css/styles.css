@@ -1,0 +1,113 @@
+/* Custom styles for the Smart Lock Scheduler */
+
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+/* Calendar Styles */
+#calendar {
+    height: 600px;
+}
+
+.fc-event {
+    border-radius: 6px;
+    padding: 4px;
+    margin: 2px 0;
+    border: none;
+    transition: transform 0.2s;
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Styles */
+.form-label {
+    font-weight: 500;
+}
+
+.form-control, .form-select {
+    border-radius: 5px;
+    padding: 10px 12px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Button Styles */
+.btn {
+    border-radius: 5px;
+    padding: 10px 16px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0a58ca;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Access Code Display */
+.access-code-display {
+    font-family: monospace;
+    letter-spacing: 3px;
+    font-size: 32px !important;
+    font-weight: bold;
+    text-align: center;
+    padding: 15px !important;
+    margin: 20px 0 !important;
+    background-color: #e9ecef;
+    border-radius: 8px !important;
+    border: 2px dashed #0d6efd !important;
+    color: #0d6efd;
+}
+
+/* Navigation */
+.navbar {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    #calendar {
+        height: 500px;
+    }
+    
+    .access-code-display {
+        font-size: 24px !important;
+        letter-spacing: 2px;
+    }
+}
+
+/* Loading Overlay */
+#loadingOverlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+} 
